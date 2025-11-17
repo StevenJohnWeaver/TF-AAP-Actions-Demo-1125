@@ -97,8 +97,12 @@ variable "turbo_hostname" {
   sensitive   = false
 }
 
+locals {
+  server_count = 3 # Define the desired number of servers here
+}
+
 data "turbonomic_cloud_entity_recommendation" "example" {
-  count        = aws_instance.web_server.count
+  count        = local.server_count # Referencing the local value
   entity_name  = "hcp-terraform-aap-demo-${count.index + 1}"
   entity_type  = "VirtualMachine"
   default_size = "t3.nano"
@@ -106,7 +110,7 @@ data "turbonomic_cloud_entity_recommendation" "example" {
 
 # Provision the AWS EC2 instance(s)
 resource "aws_instance" "web_server" {
-  count                     = 3
+  count                     = local.server_count # Referencing the local value
   ami                       = "ami-0dfc569a8686b9320" # Red Hat Enterprise Linux 9 (HVM)
   instance_type             = data.turbonomic_cloud_entity_recommendation.example[count.index].new_instance_type
   key_name                  = var.ssh_key_name
