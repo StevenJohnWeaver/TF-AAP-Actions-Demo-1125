@@ -1,10 +1,6 @@
 terraform {
   required_version = "~> v1.14.0"
   required_providers {
-    turbonomic = { 
-      source  = "IBM/turbonomic" 
-      version = "1.2.0"
-    }
     aap = {
       source = "ansible/aap"
       version = "1.4.0-devpreview1"
@@ -27,14 +23,6 @@ provider "aap" {
   insecure_skip_verify = true
   username = var.aap_username
   password = var.aap_password
-}
-
-# Configure the Turbonomic provider
-provider "turbonomic" {
-  hostname = var.turbo_hostname
-  username = var.turbo_username
-  password = var.turbo_password
-  skipverify = true
 }
 
 # Variable to store the public key for the EC2 instance
@@ -79,50 +67,18 @@ variable "aap_password" {
   sensitive   = true
 }
 
-variable "turbo_username" {
-  description = "The username for the Turbonomic instance"
-  type        = string
-  sensitive   = false
-}
-
-variable "turbo_password" {
-  description = "The password for the Turbonomic instance"
-  type        = string
-  sensitive   = true
-}
-
-variable "turbo_hostname" {
-  description = "The hostname for the Turbonomic instance"
-  type        = string
-  sensitive   = false
-}
-
-locals {
-  server_count = 3 # Define the desired number of servers here
-}
-
-data "turbonomic_cloud_entity_recommendation" "example" {
-  count        = local.server_count # Referencing the local value
-  entity_name  = "hcp-terraform-aap-demo-${count.index + 1}"
-  entity_type  = "VirtualMachine"
-  default_size = "t3.nano"
-}
-
 # Provision the AWS EC2 instance(s)
 resource "aws_instance" "web_server" {
-  count                     = local.server_count # Referencing the local value
+  count                     = 3
   ami                       = "ami-0dfc569a8686b9320" # Red Hat Enterprise Linux 9 (HVM)
-  instance_type             = data.turbonomic_cloud_entity_recommendation.example[count.index].new_instance_type
+  instance_type             = "t2.micro"
   key_name                  = var.ssh_key_name
   vpc_security_group_ids    = [aws_security_group.allow_http_ssh.id]
   associate_public_ip_address = true
-  tags = merge(
-    {
+  tags {
     Name = "hcp-terraform-aap-demo-${count.index + 1}"
     owner = "sjweaver"
-    },
-    provider::turbonomic::get_tag()
-  )
+  }
   lifecycle {
     # This action triggers syntax new in terraform
     # It configures terraform to run the listed actions based
